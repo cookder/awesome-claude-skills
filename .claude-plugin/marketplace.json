@@ -39,6 +39,12 @@
       "category": "business-marketing"
     },
     {
+      "name": "box-sales-discovery",
+      "description": "Analyzes Box sales calls using the Discovery Framework with grades on quadrant coverage, decision process mapping, and persona identification for improved deal execution.",
+      "source": "./box-sales-discovery",
+      "category": "business-marketing"
+    },
+    {
       "name": "content-research-writer",
       "description": "Assists in writing high-quality content by conducting research, adding citations, improving hooks, and providing section-by-section feedback.",
       "source": "./content-research-writer",
