@@ -106,26 +106,42 @@ struct UploadView: View {
     }
 
     private func handleFileImport(result: Result<[URL], Error>) {
+        print("📄 File import called")
         switch result {
         case .success(let urls):
-            guard let url = urls.first else { return }
+            print("📄 Success - got \(urls.count) URLs")
+            guard let url = urls.first else {
+                print("📄 No URL found")
+                alertMessage = "No file selected"
+                showingAlert = true
+                return
+            }
+            print("📄 Processing URL: \(url)")
             processStatement(from: url)
         case .failure(let error):
+            print("📄 Error: \(error.localizedDescription)")
             alertMessage = "Failed to import file: \(error.localizedDescription)"
             showingAlert = true
         }
     }
 
     private func processStatement(from url: URL) {
-        guard let card = selectedCard else { return }
+        print("🔄 processStatement called")
+        guard let card = selectedCard else {
+            print("❌ No card selected")
+            return
+        }
 
+        print("✅ Card selected: \(card.name)")
         isProcessing = true
         processingStatus = "Reading statement..."
 
         Task {
             do {
+                print("🔐 Requesting security access...")
                 // Start accessing security-scoped resource
                 guard url.startAccessingSecurityScopedResource() else {
+                    print("❌ Security access denied")
                     await MainActor.run {
                         isProcessing = false
                         alertMessage = "Unable to access the file. Please try again."
@@ -133,10 +149,13 @@ struct UploadView: View {
                     }
                     return
                 }
+                print("✅ Security access granted")
                 defer { url.stopAccessingSecurityScopedResource() }
 
+                print("📖 Parsing statement...")
                 let parser = StatementParser()
                 let parsed = try await parser.parseStatement(from: url)
+                print("✅ Parsed \(parsed.count) transactions")
 
                 await MainActor.run {
                     processingStatus = "Importing \(parsed.count) transactions..."
