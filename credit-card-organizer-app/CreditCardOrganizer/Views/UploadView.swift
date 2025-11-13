@@ -124,6 +124,17 @@ struct UploadView: View {
 
         Task {
             do {
+                // Start accessing security-scoped resource
+                guard url.startAccessingSecurityScopedResource() else {
+                    await MainActor.run {
+                        isProcessing = false
+                        alertMessage = "Unable to access the file. Please try again."
+                        showingAlert = true
+                    }
+                    return
+                }
+                defer { url.stopAccessingSecurityScopedResource() }
+
                 let parser = StatementParser()
                 let parsed = try await parser.parseStatement(from: url)
 
