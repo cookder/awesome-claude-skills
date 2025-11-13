@@ -9,26 +9,28 @@ struct CardsView: View {
 
     var body: some View {
         NavigationStack {
-            if cards.isEmpty {
-                ContentUnavailableView(
-                    "No Cards",
-                    systemImage: "creditcard",
-                    description: Text("Add your first credit card to get started")
-                )
-            } else {
-                List {
-                    ForEach(cards) { card in
-                        CardRow(card: card)
+            Group {
+                if cards.isEmpty {
+                    ContentUnavailableView(
+                        "No Cards",
+                        systemImage: "creditcard",
+                        description: Text("Add your first credit card to get started")
+                    )
+                } else {
+                    List {
+                        ForEach(cards) { card in
+                            CardRow(card: card)
+                        }
+                        .onDelete(perform: deleteCards)
                     }
-                    .onDelete(perform: deleteCards)
                 }
             }
-        }
-        .navigationTitle("Cards")
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: { showingAddCard = true }) {
-                    Image(systemName: "plus")
+            .navigationTitle("Cards")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showingAddCard = true }) {
+                        Image(systemName: "plus")
+                    }
                 }
             }
         }
