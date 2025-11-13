@@ -27,13 +27,94 @@ class StatementParser {
         var transactions: [ParsedTransaction] = []
         let lines = text.components(separatedBy: .newlines)
 
-        for line in lines {
-            if let transaction = parseLine(line) {
+        // Check if this is CSV format
+        if let firstLine = lines.first, firstLine.contains("Date") && firstLine.contains("Amount") && firstLine.contains("Merchant") {
+            // CSV format detected
+            transactions = parseCSVFormat(lines: lines)
+        } else {
+            // Regular text format
+            for line in lines {
+                if let transaction = parseLine(line) {
+                    transactions.append(transaction)
+                }
+            }
+        }
+
+        return transactions
+    }
+
+    /// Parse CSV format transactions
+    private func parseCSVFormat(lines: [String]) -> [ParsedTransaction] {
+        var transactions: [ParsedTransaction] = []
+
+        guard lines.count > 1 else { return transactions }
+
+        // Skip header line
+        for line in lines.dropFirst() {
+            if let transaction = parseCSVLine(line) {
                 transactions.append(transaction)
             }
         }
 
         return transactions
+    }
+
+    /// Parse a single CSV line
+    private func parseCSVLine(_ line: String) -> ParsedTransaction? {
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        // Split by comma, handling quoted fields
+        let fields = parseCSVFields(line: trimmed)
+
+        // Expected format: Date,Time,Cardholder,Amount,Points,Balance,Status,Type,Merchant,Description
+        guard fields.count >= 9 else { return nil }
+
+        let dateString = fields[0]
+        let amountString = fields[3]
+        let merchant = fields[8]
+
+        // Parse date (YYYY-MM-DD format)
+        guard let date = parseDate(from: dateString) else { return nil }
+
+        // Parse amount
+        let cleanAmount = amountString.replacingOccurrences(of: ",", with: "")
+        guard let amount = Double(cleanAmount) else { return nil }
+
+        // Clean merchant name (remove quotes if present)
+        let cleanMerchant = merchant.trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+
+        return ParsedTransaction(
+            date: date,
+            merchant: cleanMerchant,
+            amount: amount,
+            description: trimmed
+        )
+    }
+
+    /// Parse CSV fields handling quoted values
+    private func parseCSVFields(line: String) -> [String] {
+        var fields: [String] = []
+        var currentField = ""
+        var insideQuotes = false
+
+        for char in line {
+            if char == "\"" {
+                insideQuotes.toggle()
+            } else if char == "," && !insideQuotes {
+                fields.append(currentField)
+                currentField = ""
+            } else {
+                currentField.append(char)
+            }
+        }
+
+        // Add the last field
+        if !currentField.isEmpty {
+            fields.append(currentField)
+        }
+
+        return fields
     }
 
     /// Attempt to parse a single line as a transaction
