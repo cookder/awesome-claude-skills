@@ -83,6 +83,28 @@ struct UploadView: View {
                     }
                     .padding(.horizontal)
 
+                    // Sample data button for testing
+                    Button(action: {
+                        if cards.isEmpty {
+                            alertMessage = "Please add a credit card first from the Cards tab"
+                            showingAlert = true
+                        } else if selectedCard == nil {
+                            alertMessage = "Please select a card first"
+                            showingAlert = true
+                        } else {
+                            loadSampleData()
+                        }
+                    }) {
+                        Label("Load Sample Data (Testing)", systemImage: "wand.and.stars")
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.orange)
+                            .cornerRadius(10)
+                    }
+                    .padding(.horizontal)
+
                     Spacer()
                 }
             }
@@ -227,6 +249,72 @@ struct UploadView: View {
         }
 
         return "Other"
+    }
+
+    private func loadSampleData() {
+        guard let card = selectedCard else { return }
+
+        isProcessing = true
+        processingStatus = "Creating sample transactions..."
+
+        Task {
+            await MainActor.run {
+                // Sample transactions based on the CSV format you provided
+                let sampleData = [
+                    ("2025-11-12", "Elevenlabs.Io", 5.33),
+                    ("2025-11-11", "Silver Diner", 47.15),
+                    ("2025-11-11", "Apple", 55.17),
+                    ("2025-11-11", "Oura Ring Inc", 6.39),
+                    ("2025-11-10", "Cursor, AI Powered IDE", 21.32),
+                    ("2025-11-10", "Frontier Airlines", 216.96),
+                    ("2025-11-09", "Quick Snacks", 7.00),
+                    ("2025-11-08", "Starbucks", 12.45),
+                    ("2025-11-08", "Netflix", 15.99),
+                    ("2025-11-07", "Uber", 23.50),
+                    ("2025-11-06", "Whole Foods", 87.32),
+                    ("2025-11-05", "Spotify", 9.99),
+                    ("2025-11-04", "Shell Gas Station", 45.00),
+                    ("2025-11-03", "Amazon", 127.89),
+                    ("2025-11-02", "Target", 64.23)
+                ]
+
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateFormat = "yyyy-MM-dd"
+
+                for (dateString, merchant, amount) in sampleData {
+                    let date = dateFormatter.date(from: dateString) ?? Date()
+                    let transaction = Transaction(
+                        date: date,
+                        merchant: merchant,
+                        amount: amount,
+                        description: "\(dateString),\(merchant),\(amount)",
+                        category: categorizeTransaction(merchant: merchant)
+                    )
+                    transaction.card = card
+                    modelContext.insert(transaction)
+                }
+
+                do {
+                    try modelContext.save()
+
+                    // Detect recurring transactions
+                    processingStatus = "Detecting recurring charges..."
+                    let allTransactions = try modelContext.fetch(FetchDescriptor<Transaction>())
+                    let detector = RecurringDetector()
+                    let patterns = detector.detectRecurringTransactions(from: allTransactions)
+                    detector.markRecurringTransactions(patterns: patterns)
+                    try modelContext.save()
+
+                    isProcessing = false
+                    alertMessage = "Successfully loaded \(sampleData.count) sample transactions!"
+                    showingAlert = true
+                } catch {
+                    isProcessing = false
+                    alertMessage = "Error loading sample data: \(error.localizedDescription)"
+                    showingAlert = true
+                }
+            }
+        }
     }
 }
 
